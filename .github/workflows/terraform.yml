@@ -1,6 +1,33 @@
-env:
-  TF_VAR_github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+name: Terraform Workflow
 
-- name: Write Terraform secret
-  run: |
-    echo "${{ secrets.TERRAFORM }}" > secret.auto.tfvars
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Write Terraform secret to file
+      run: |
+        echo "${{ secrets.TERRAFORM }}" > secret.auto.tfvars
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.7
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      run: |
+        terraform validate
+        terraform plan -var-file="secret.auto.tfvars" -out=tfplan
+    ```
+
