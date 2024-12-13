@@ -60,3 +60,45 @@ resource "github_repository_collaborator" "collaborator" {
   username   = "softservedata"
   permission = "push"
 }
+
+resource "github_repository_file" "pull_request_template" {
+  repository = "github-terraform-task-nadiablack"
+  file       = ".github/pull_request_template.md"
+  content    = <<EOT
+### Describe your changes
+
+### Issue ticket number and link
+
+### Checklist before requesting a review
+- [ ] I have performed a self-review of my code
+- [ ] If it is a core feature, I have added thorough tests
+- [ ] Do we need to implement analytics?
+- [ ] Will this be part of a product update? If yes, please write one phrase about this update
+EOT
+  branch     = "main"
+}
+
+resource "github_branch_protection_v3" "codeowners" {
+  repository                   = "github-terraform-task-nadiablack"
+  branch                       = "main"
+  enforce_admins               = true
+  dismiss_stale_reviews        = true
+
+  required_pull_request_reviews {
+    dismiss_stale_reviews        = true
+    require_code_owner_reviews   = true
+    required_approving_review_count = 1
+  }
+
+  push_restrictions = ["softservedata"]
+}
+
+resource "github_repository_webhook" "discord_notification" {
+  repository = "github-terraform-task-nadiablack"
+  events     = ["pull_request"]
+  configuration {
+    url          = var.discord_webhook_url
+    content_type = "json"
+    insecure_ssl = false
+  }
+}
