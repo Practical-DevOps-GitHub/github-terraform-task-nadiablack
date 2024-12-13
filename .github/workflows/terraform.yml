@@ -1,9 +1,2 @@
-name: Terraform Workflow
-
-on:
-  push:
-    branches:
-      - main
-
-      env:
-        TF_VAR_github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+env:
+     TF_VAR_github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
