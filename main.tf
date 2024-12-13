@@ -11,7 +11,6 @@ provider "github" {
   token = var.github_token
 }
 
-# Створення захищених гілок
 resource "github_branch" "develop" {
   repository    = "github-terraform-task-nadiablack"
   branch        = "develop"
@@ -44,7 +43,6 @@ resource "github_branch_protection" "develop_protection" {
   }
 }
 
-# Додавання ключа розгортання
 resource "github_repository_deploy_key" "deploy_key" {
   repository = "github-terraform-task-nadiablack"
   title      = "DEPLOY_KEY"
@@ -52,7 +50,6 @@ resource "github_repository_deploy_key" "deploy_key" {
   read_only  = false
 }
 
-# Додавання колаборатора
 resource "github_repository_collaborator" "collaborator" {
   repository = "github-terraform-task-nadiablack"
   username   = "softservedata"
