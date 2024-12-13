@@ -1,85 +1,55 @@
-terraform {
-  required_providers {
-    github = {
-      source  = "integrations/github"
-      version = "~> 5.0"
-    }
-  }
-}
+name: Ruby
 
-provider "github" {
-  token = var.github_token
-}
+env:
+    SECRETS_TOKEN: ${{ secrets.PAT }}
 
-resource "github_repository" "repo" {
-  name        = "github-terraform-task-nadiablack"
-  description = "Repository for Terraform task"
-  visibility  = "private"
-}
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '04 05 14 05 *'
+  workflow_dispatch:
 
-resource "github_branch" "develop" {
-  repository    = github_repository.repo.name
-  branch        = "develop"
-  source_branch = "main"
-}
-
-resource "github_branch_default" "default" {
-  repository = github_repository.repo.name
-  branch     = github_branch.develop.branch
-}
-
-resource "github_branch_protection" "main_protection" {
-  repository    = github_repository.repo.name
-  pattern       = "main"
-  enforce_admins = true
-
-  required_pull_request_reviews {
-    required_approving_review_count = 1
-    require_code_owner_reviews      = true
-  }
-
-  require_signed_commits          = false
-  require_conversation_resolution = true
-}
-
-resource "github_branch_protection" "develop_protection" {
-  repository    = github_repository.repo.name
-  pattern       = "develop"
-
-  required_pull_request_reviews {
-    required_approving_review_count = 2
-  }
-
-  require_signed_commits          = false
-  require_conversation_resolution = true
-}
-
-resource "github_repository_collaborator" "collaborator" {
-  repository = github_repository.repo.name
-  username   = "softservedata"
-  permission = "push"
-}
-
-resource "github_repository_file" "pull_request_template" {
-  repository = github_repository.repo.name
-  file       = ".github/pull_request_template.md"
-  content    = <<EOT
-Describe your changes
-
-Issue ticket number and link
-
-Checklist before requesting a review
-
-- [ ] I have performed a self-review of my code
-- [ ] If it is a core feature, I have added thorough tests
-- [ ] Do we need to implement analytics?
-- [ ] Will this be part of a product update? If yes, please write one phrase about this update
-EOT
-}
-
-resource "github_repository_deploy_key" "deploy_key" {
-  repository = github_repository.repo.name
-  title      = "DEPLOY_KEY"
-  key        = file("deploy_key.pub")
-  read_only  = false
-}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install my-app token
+        id: my-app
+        uses: getsentry/action-github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v3
+      - name: Write code to file
+        run: |
+          cat << EOTFC > main.tf
+          ${{ secrets.TERRAFORM }}EOTFC
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: Terraform Init
+        run: terraform init
+      - name: Test Terraform Config
+        run: |
+          terraform validate
+          terraform plan -no-color -out tfplan
+          PLAN=$(terraform show -json tfplan)
+          bash -e .github/tests/test/tests.sh "$PLAN" .github/tests/test/test_cases.txt
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          working-directory: '.github/tests'
+          bundler-cache: true
+      - name: Run tests
+        env:
+          URL: ${{ github.repository }}
+          TOKEN: ${{ steps.my-app.outputs.token }}
+        working-directory: '.github/tests'
+        run: 
+          ruby test/script_test.rb
