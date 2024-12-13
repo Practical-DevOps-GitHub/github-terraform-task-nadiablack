@@ -1,55 +1,62 @@
-name: Ruby
+terraform {
+  required_providers {
+    github = {
+      source  = "integrations/github"
+      version = "~> 5.0"
+    }
+  }
+}
 
-env:
-    SECRETS_TOKEN: ${{ secrets.PAT }}
+provider "github" {
+  token = var.github_token
+}
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-  schedule:
-    - cron: '04 05 14 05 *'
-  workflow_dispatch:
+resource "github_branch" "develop" {
+  repository    = "github-terraform-task-nadiablack"
+  branch        = "develop"
+  source_branch = "main"
+}
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Install my-app token
-        id: my-app
-        uses: getsentry/action-github-app-token@v2
-        with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: actions/checkout@v3
-      - name: Write code to file
-        run: |
-          cat << EOTFC > main.tf
-          ${{ secrets.TERRAFORM }}EOTFC
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
-      - name: Terraform Init
-        run: terraform init
-      - name: Test Terraform Config
-        run: |
-          terraform validate
-          terraform plan -no-color -out tfplan
-          PLAN=$(terraform show -json tfplan)
-          bash -e .github/tests/test/tests.sh "$PLAN" .github/tests/test/test_cases.txt
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          working-directory: '.github/tests'
-          bundler-cache: true
-      - name: Run tests
-        env:
-          URL: ${{ github.repository }}
-          TOKEN: ${{ steps.my-app.outputs.token }}
-        working-directory: '.github/tests'
-        run: 
-          ruby test/script_test.rb
+resource "github_branch_default" "default" {
+  repository = "github-terraform-task-nadiablack"
+  branch     = "develop"
+}
+
+resource "github_branch_protection" "main_protection" {
+  repository                   = "github-terraform-task-nadiablack"
+  pattern                      = "main"
+  enforce_admins               = true
+  require_signed_commits       = false
+  required_linear_history      = true
+  require_conversation_resolution = true
+
+  required_pull_request_reviews {
+    required_approving_review_count = 1
+    require_code_owner_reviews      = true
+  }
+}
+
+resource "github_branch_protection" "develop_protection" {
+  repository                   = "github-terraform-task-nadiablack"
+  pattern                      = "develop"
+  enforce_admins               = false
+  require_signed_commits       = false
+  required_linear_history      = true
+
+  required_pull_request_reviews {
+    required_approving_review_count = 2
+  }
+}
+
+resource "github_repository_deploy_key" "deploy_key" {
+  repository = "github-terraform-task-nadiablack"
+  title      = "DEPLOY_KEY"
+  key        = file("deploy_key.pub")
+  read_only  = false
+}
+
+resource "github_repository_collaborator" "collaborator" {
+  repository = "github-terraform-task-nadiablack"
+  username   = "softservedata"
+  permission = "push"
+}
