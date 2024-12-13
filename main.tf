@@ -11,12 +11,14 @@ provider "github" {
   token = var.github_token
 }
 
+# Створення гілки develop
 resource "github_branch" "develop" {
   repository    = "github-terraform-task-nadiablack"
   branch        = "develop"
   source_branch = "main"
 }
 
+# Захист гілки main
 resource "github_branch_protection" "main_protection" {
   repository_id                   = "github-terraform-task-nadiablack"
   pattern                         = "main"
@@ -31,6 +33,7 @@ resource "github_branch_protection" "main_protection" {
   }
 }
 
+# Захист гілки develop
 resource "github_branch_protection" "develop_protection" {
   repository_id                   = "github-terraform-task-nadiablack"
   pattern                         = "develop"
@@ -43,6 +46,7 @@ resource "github_branch_protection" "develop_protection" {
   }
 }
 
+# Додавання deploy key
 resource "github_repository_deploy_key" "deploy_key" {
   repository = "github-terraform-task-nadiablack"
   title      = "DEPLOY_KEY"
@@ -50,8 +54,13 @@ resource "github_repository_deploy_key" "deploy_key" {
   read_only  = false
 }
 
+# Додавання співробітника
 resource "github_repository_collaborator" "collaborator" {
   repository = "github-terraform-task-nadiablack"
   username   = "softservedata"
   permission = "push"
 }
+
+# Оголошення змінних
+variable "github_token" {}
+variable "deploy_key" {}

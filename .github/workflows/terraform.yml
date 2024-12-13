@@ -1,2 +1,2 @@
 env:
-  TF_VAR_github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  TF_VAR_github_token: ${{ secrets.FULL_CONFIG }}
