@@ -18,7 +18,13 @@ variable "deploy_key_content" {
   type        = string
 }
 
-# Використання провайдера GitHub
+variable "discord_webhook_url" {
+  description = "Webhook URL for Discord notifications"
+  type        = string
+  default     = ""
+}
+
+# Провайдер GitHub
 provider "github" {
   token = var.github_token
 }
