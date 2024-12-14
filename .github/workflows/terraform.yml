@@ -1,0 +1,34 @@
+name: Terraform Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Клонуємо репозиторій
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # 2. Налаштовуємо змінні середовища з секрету TERRAFORM
+    - name: Set environment variables from TERRAFORM secret
+      run: |
+        echo "${{ secrets.TERRAFORM }}" > terraform.env
+        export $(cat terraform.env | xargs)
+
+    # 3. Ініціалізуємо Terraform
+    - name: Terraform Init
+      run: terraform init
+
+    # 4. Плануємо зміни Terraform
+    - name: Terraform Plan
+      run: terraform plan
+
+    # 5. Застосовуємо зміни Terraform
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
