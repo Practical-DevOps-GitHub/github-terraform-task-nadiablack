@@ -7,50 +7,57 @@ terraform {
   }
 }
 
-variable "github_token" { }
+# Оголошення змінних
+variable "github_token" {
+  description = "GitHub Personal Access Token"
+  type        = string
+}
 
+variable "deploy_key_content" {
+  description = "Content of the deploy key"
+  type        = string
+}
+
+# Використання провайдера GitHub
 provider "github" {
   token = var.github_token
 }
 
+# Створення репозиторію
 resource "github_repository" "my_repo" {
-  name      = "your-repository-name"
-  owner     = "your-github-username"
+  name           = "your-repository-name"
+  owner          = "your-github-username"
+  collaborators  = ["softservedata"]
+  default_branch = "develop"
 
-   collaborators = ["softservedata"]
-
-   default_branch = "develop"
-
-   protection_rule {
+  # Захист гілки main
+  protection_rule {
     branch_name = "main"
-
-      requires_approving_reviews {
-      enabled  = true
+    requires_approving_reviews {
+      enabled            = true
       required_approvals = 1
     }
-
     restrictions {
-      type = "user"
+      type  = "user"
       users = ["your-github-username"]
     }
   }
 
+  # Захист гілки develop
   protection_rule {
     branch_name = "develop"
-
-  
     requires_approving_reviews {
-      enabled  = true
+      enabled            = true
       required_approvals = 2
     }
   }
 
- 
+  # Вказання codeowners
   codeowners = <<EOF
-    /*  @softservedata
+* @softservedata
 EOF
 
- 
+  # Шаблон для Pull Request
   pull_request_template = <<EOF
 ## Describe your changes
 
@@ -65,22 +72,22 @@ EOF
 EOF
 }
 
-# Optional: Add a deploy key (replace with your public key content)
+# Додавання deploy key
 resource "github_deploy_key" "deploy_key" {
   title       = "DEPLOY_KEY"
   public_key  = var.deploy_key_content
-  repository = github_repository.my_repo.full_name
+  repository  = github_repository.my_repo.full_name
+  read_only   = false
 }
 
-# Optional: Configure Discord notifications (requires webhook URL)
+# Налаштування сповіщень у Discord
 resource "null_resource" "discord_notification" {
   depends_on = [github_repository.my_repo]
 
   provisioner "local-exec" {
-    when = delete
-
+    when    = create
     command = <<EOF
-      curl -X POST -H "Content-Type: application/json" ${var.discord_webhook_url} -d '{ "content": "New pull request created in '${github_repository.my_repo.full_name}'" }'
+      curl -X POST -H "Content-Type: application/json" ${var.discord_webhook_url} -d '{"content": "New pull request created in ${github_repository.my_repo.full_name}"}'
 EOF
   }
 }
