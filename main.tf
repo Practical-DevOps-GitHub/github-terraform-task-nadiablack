@@ -1,4 +1,3 @@
-# Configure Terraform with required providers
 terraform {
   required_providers {
     github = {
@@ -8,37 +7,28 @@ terraform {
   }
 }
 
-# Set environment variables for secrets (replace with your values)
 variable "github_token" { }
-variable "discord_webhook_url" { }  # Optional, for Discord notifications
 
-# Configure GitHub provider with access token
 provider "github" {
   token = var.github_token
 }
 
-# Define the GitHub repository resource
 resource "github_repository" "my_repo" {
   name      = "your-repository-name"
   owner     = "your-github-username"
 
-  # Collaborators
-  collaborators = ["softservedata"]
+   collaborators = ["softservedata"]
 
-  # Default branch
-  default_branch = "develop"
+   default_branch = "develop"
 
-  # Branch protection rules
-  protection_rule {
+   protection_rule {
     branch_name = "main"
 
-    # Require pull request for merge
-    requires_approving_reviews {
+      requires_approving_reviews {
       enabled  = true
       required_approvals = 1
     }
 
-    # Only owner can approve pull requests to main
     restrictions {
       type = "user"
       users = ["your-github-username"]
@@ -48,19 +38,19 @@ resource "github_repository" "my_repo" {
   protection_rule {
     branch_name = "develop"
 
-    # Require pull request for merge
+  
     requires_approving_reviews {
       enabled  = true
       required_approvals = 2
     }
   }
 
-  # Code owners
+ 
   codeowners = <<EOF
     /*  @softservedata
 EOF
 
-  # Pull request template
+ 
   pull_request_template = <<EOF
 ## Describe your changes
 
