@@ -20,27 +20,17 @@ variable "deploy_key_content" {
   sensitive   = true
 }
 
-variable "discord_webhook_url" {
-  description = "Discord Webhook URL for notifications"
-  type        = string
-  default     = ""
-}
-
-# Налаштування провайдера GitHub
+# Провайдер GitHub
 provider "github" {
   token = var.github_token
 }
 
 # Створення репозиторію
 resource "github_repository" "my_repo" {
-  name           = "github-terraform-task-nadiablack"
-  description    = "Repository managed by Terraform"
-  private        = true
-  has_issues     = true
-  has_projects   = true
-  has_wiki       = true
-  auto_init      = true
-  default_branch = "develop"
+  name        = "github-terraform-task-nadiablack"
+  description = "Repository managed by Terraform"
+  visibility  = "public"
+  auto_init   = true
 }
 
 # Додавання співпрацівника
@@ -50,10 +40,22 @@ resource "github_repository_collaborator" "collaborator" {
   permission = "push"
 }
 
+# Створення гілки develop
+resource "github_branch" "develop" {
+  repository = github_repository.my_repo.name
+  branch     = "develop"
+}
+
+# Встановлення develop як гілки за замовчуванням
+resource "github_branch_default" "default" {
+  repository = github_repository.my_repo.name
+  branch     = github_branch.develop.branch
+}
+
 # Захист гілки main
-resource "github_branch_protection_v3" "main" {
-  repository     = github_repository.my_repo.name
-  branch         = "main"
+resource "github_branch_protection" "main" {
+  repository_id = github_repository.my_repo.node_id
+  pattern       = "main"
   enforce_admins = true
 
   required_pull_request_reviews {
@@ -66,17 +68,12 @@ resource "github_branch_protection_v3" "main" {
     strict   = true
     contexts = []
   }
-
-  restrictions {
-    users = ["nadiablack"]
-    teams = []
-  }
 }
 
 # Захист гілки develop
-resource "github_branch_protection_v3" "develop" {
-  repository     = github_repository.my_repo.name
-  branch         = "develop"
+resource "github_branch_protection" "develop" {
+  repository_id = github_repository.my_repo.node_id
+  pattern       = "develop"
   enforce_admins = true
 
   required_pull_request_reviews {
@@ -89,14 +86,9 @@ resource "github_branch_protection_v3" "develop" {
     strict   = true
     contexts = []
   }
-
-  restrictions {
-    users = []
-    teams = []
-  }
 }
 
-# Файл CODEOWNERS
+# Додавання файлу CODEOWNERS
 resource "github_repository_file" "codeowners" {
   repository = github_repository.my_repo.name
   file       = ".github/CODEOWNERS"
@@ -108,22 +100,25 @@ resource "github_repository_file" "codeowners" {
 resource "github_repository_file" "pull_request_template" {
   repository = github_repository.my_repo.name
   file       = ".github/pull_request_template.md"
-  content = <<EOF
-## Describe your changes
+  content = <<-EOT
+    ## Describe your changes
 
-**Issue ticket number and link:**
+    **Issue ticket number and link:**
 
-**Checklist before requesting a review:**
+    **Checklist before requesting a review:**
 
-* I have performed a self-review of my code.
-* If it is a core feature, I have added thorough tests.
-* Do we need to implement analytics?
-* Will this be part of a product update? If yes, please write one phrase about this update.
-EOF
+    * I have performed a self-review of my code.
+    * If it is a core feature, I have added thorough tests.
+    * Do we need to implement analytics?
+    * Will this be part of a product update? If yes, please write one phrase about this update.
+  EOT
   branch = "main"
 }
 
 # Додавання deploy key
-resource "github_deploy_key" "deploy_key" {
+resource "github_repository_deploy_key" "deploy_key" {
+  repository = github_repository.my_repo.name
   title      = "DEPLOY_KEY"
-  public_key = var.deploy_key_c
+  key        = var.deploy_key_content
+  read_only  = false
+}
