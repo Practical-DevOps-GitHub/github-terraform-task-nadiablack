@@ -1,71 +1,96 @@
+# Configure Terraform with required providers
 terraform {
   required_providers {
     github = {
       source  = "integrations/github"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
   }
 }
 
+# Set environment variables for secrets (replace with your values)
+variable "github_token" { }
+variable "discord_webhook_url" { }  # Optional, for Discord notifications
+
+# Configure GitHub provider with access token
 provider "github" {
   token = var.github_token
 }
 
-variable "github_token" {
-  description = "GitHub Personal Access Token"
-  type        = string
-}
+# Define the GitHub repository resource
+resource "github_repository" "my_repo" {
+  name      = "your-repository-name"
+  owner     = "your-github-username"
 
-resource "github_branch" "develop" {
-  repository    = "github-terraform-task-nadiablack"
-  branch        = "develop"
-  source_branch = "main"
-}
+  # Collaborators
+  collaborators = ["softservedata"]
 
-resource "github_branch_default" "default" {
-  repository = "github-terraform-task-nadiablack"
-  branch     = "develop"
-}
+  # Default branch
+  default_branch = "develop"
 
-resource "github_branch_protection" "main_protection" {
-  repository                   = "github-terraform-task-nadiablack"
-  pattern                      = "main"
-  enforce_admins               = true
+  # Branch protection rules
+  protection_rule {
+    branch_name = "main"
 
-  required_pull_request_reviews {
-    required_approving_review_count = 1
-    require_code_owner_reviews      = true
+    # Require pull request for merge
+    requires_approving_reviews {
+      enabled  = true
+      required_approvals = 1
+    }
+
+    # Only owner can approve pull requests to main
+    restrictions {
+      type = "user"
+      users = ["your-github-username"]
+    }
   }
-}
 
-resource "github_branch_protection" "develop_protection" {
-  repository                   = "github-terraform-task-nadiablack"
-  pattern                      = "develop"
+  protection_rule {
+    branch_name = "develop"
 
-  required_pull_request_reviews {
-    required_approving_review_count = 2
+    # Require pull request for merge
+    requires_approving_reviews {
+      enabled  = true
+      required_approvals = 2
+    }
   }
+
+  # Code owners
+  codeowners = <<EOF
+    /*  @softservedata
+EOF
+
+  # Pull request template
+  pull_request_template = <<EOF
+## Describe your changes
+
+**Issue ticket number and link:**
+
+**Checklist before requesting a review:**
+
+* I have performed a self-review of my code.
+* If it is a core feature, I have added thorough tests.
+* Do we need to implement analytics?
+* Will this be part of a product update? If yes, please write one phrase about this update.
+EOF
 }
 
-resource "github_repository_collaborator" "collaborator" {
-  repository = "github-terraform-task-nadiablack"
-  username   = "softservedata"
-  permission = "push"
+# Optional: Add a deploy key (replace with your public key content)
+resource "github_deploy_key" "deploy_key" {
+  title       = "DEPLOY_KEY"
+  public_key  = var.deploy_key_content
+  repository = github_repository.my_repo.full_name
 }
 
-resource "github_repository_file" "pull_request_template" {
-  repository = "github-terraform-task-nadiablack"
-  file       = ".github/pull_request_template.md"
-  content    = <<EOT
-### Describe your changes
+# Optional: Configure Discord notifications (requires webhook URL)
+resource "null_resource" "discord_notification" {
+  depends_on = [github_repository.my_repo]
 
-### Issue ticket number and link
+  provisioner "local-exec" {
+    when = delete
 
-### Checklist before requesting a review
-- [ ] I have performed a self-review of my code
-- [ ] If it is a core feature, I have added thorough tests
-- [ ] Do we need to implement analytics?
-- [ ] Will this be part of a product update? If yes, please write one phrase about this update
-EOT
-  branch     = "main"
+    command = <<EOF
+      curl -X POST -H "Content-Type: application/json" ${var.discord_webhook_url} -d '{ "content": "New pull request created in '${github_repository.my_repo.full_name}'" }'
+EOF
+  }
 }
