@@ -1,0 +1,34 @@
+{
+  "version": 4,
+  "terraform_version": "1.10.2",
+  "serial": 34,
+  "lineage": "b0ffe95e-b73e-83c4-5331-a337a10c424e",
+  "outputs": {},
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "github_repository_collaborator",
+      "name": "collaborator",
+      "provider": "provider[\"registry.terraform.io/hashicorp/github\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "github-terraform-task-nadiablack:softservedata",
+            "invitation_id": "268987048",
+            "permission": "push",
+            "permission_diff_suppression": false,
+            "repository": "github-terraform-task-nadiablack",
+            "username": "softservedata"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "github_repository.main_repo"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
