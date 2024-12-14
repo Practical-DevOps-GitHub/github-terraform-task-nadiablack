@@ -18,12 +18,6 @@ variable "deploy_key_content" {
   type        = string
 }
 
-variable "discord_webhook_url" {
-  description = "Webhook URL for Discord notifications"
-  type        = string
-  default     = ""
-}
-
 # Провайдер GitHub
 provider "github" {
   token = var.github_token
@@ -33,8 +27,8 @@ provider "github" {
 resource "github_repository" "my_repo" {
   name           = "your-repository-name"
   owner          = "your-github-username"
-  collaborators  = ["softservedata"]
   default_branch = "develop"
+  collaborators  = ["softservedata"]
 
   # Захист гілки main
   protection_rule {
@@ -75,25 +69,3 @@ EOF
 * If it is a core feature, I have added thorough tests.
 * Do we need to implement analytics?
 * Will this be part of a product update? If yes, please write one phrase about this update.
-EOF
-}
-
-# Додавання deploy key
-resource "github_deploy_key" "deploy_key" {
-  title       = "DEPLOY_KEY"
-  public_key  = var.deploy_key_content
-  repository  = github_repository.my_repo.full_name
-  read_only   = false
-}
-
-# Налаштування сповіщень у Discord
-resource "null_resource" "discord_notification" {
-  depends_on = [github_repository.my_repo]
-
-  provisioner "local-exec" {
-    when    = create
-    command = <<EOF
-      curl -X POST -H "Content-Type: application/json" ${var.discord_webhook_url} -d '{"content": "New pull request created in ${github_repository.my_repo.full_name}"}'
-EOF
-  }
-}
